@@ -395,10 +395,6 @@ START (Raw Session Log Event)
 
 ## 🤖 Models & Performance
 
----
-
-## 🤖 Models & Performance
-
 ### Model Summary
 
 The system employs **9 detection models** trained on 17,923 session events:
@@ -676,10 +672,6 @@ Rank  Feature                         Importance
 ```
 
 **Key Insight**: Network changes (IP, country) are the strongest attack indicators, accounting for ~50% of model decisions.
-
----
-
-## 📦 Installation
 
 ---
 
