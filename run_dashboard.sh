@@ -26,9 +26,11 @@ pip install flask flask-cors -q
 echo ""
 echo "🚀 Starting dashboard server..."
 echo ""
-echo "Dashboard will be available at: http://127.0.0.1:8000"
+echo "📱 Dashboard will be accessible at:"
+echo "   • http://localhost:8000 (local)"
+echo "   • http://172.16.5.50:8000 (network)"
 echo ""
-echo "Press Ctrl+C to stop the server"
+echo "⚠️  Keep this terminal open - Press Ctrl+C to stop"
 echo ""
 
 # Start the Flask app

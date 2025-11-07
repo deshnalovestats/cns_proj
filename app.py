@@ -488,10 +488,14 @@ if __name__ == '__main__':
     print("="*70)
     print("SESSION TOKEN ABUSE DETECTION - DASHBOARD")
     print("="*70)
-    print("\nStarting Flask server...")
-    print("Dashboard will be available at: http://127.0.0.1:8000")
-    print("\nPress Ctrl+C to stop the server")
+    print("\n🚀 Starting Flask server...")
+    print("\n✅ Dashboard URLs:")
+    print("   Local:    http://localhost:8000")
+    print("   Network:  http://172.16.5.50:8000")
+    print("   Any IP:   http://0.0.0.0:8000")
+    print("\n📱 Access from browser at any of the above URLs")
+    print("\n⚠️  Press Ctrl+C to stop the server")
     print("="*70)
     
     # Run Flask app
-    app.run(debug=True, host='0.0.0.0', port=8000)
+    app.run(debug=True, host='0.0.0.0', port=8000, threaded=True)
