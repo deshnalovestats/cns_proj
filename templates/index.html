@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Token Abuse Detection - Real-time Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .dashboard-header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+        }
+        .header-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .header-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+        }
+        .card-header {
+            background-color: #1e293b;
+            border-bottom: 2px solid #334155;
+            font-weight: 600;
+            font-size: 1.2rem;
+            padding: 1.2rem 1.5rem;
+            color: #f1f5f9;
+        }
+        .card-body {
+            padding: 1.5rem;
+        }
+        .badge-type {
+            font-size: 0.75rem;
+            padding: 0.35em 0.65em;
+            border-radius: 6px;
+        }
+        .badge-ensemble {
+            background-color: #8b5cf6;
+            color: white;
+        }
+        .badge-supervised {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .badge-unsupervised {
+            background-color: #f59e0b;
+            color: white;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-ready {
+            background-color: #10b981;
+        }
+        .status-available {
+            background-color: #3b82f6;
+        }
+        .btn-attack {
+            margin: 0.25rem;
+            font-size: 0.9rem;
+        }
+        .metrics-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .metrics-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .metrics-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        .simulator-status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .simulator-running {
+            background-color: #dcfce7;
+            border: 2px solid #10b981;
+        }
+        .simulator-stopped {
+            background-color: #fee2e2;
+            border: 2px solid #ef4444;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .latency-bar {
+            height: 4px;
+            background-color: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .latency-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #3b82f6 50%, #f59e0b 100%);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="container">
+            <h1 class="mb-2"><i class="bi bi-shield-lock"></i> Session Token Abuse Detection</h1>
+            <p class="mb-0">Real-time Threat Detection Dashboard</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <!-- Attack Simulator -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-virus"></i> Attack Simulator
+                    </div>
+                    <div class="card-body">
+                        <div id="simulatorStatus" class="simulator-status simulator-stopped">
+                            <strong>Status:</strong> <span id="statusText">Stopped</span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Simulation Type:</label>
+                            <div class="btn-group-vertical w-100" role="group">
+                                <button type="button" class="btn btn-outline-success btn-attack" onclick="startSimulator('normal')">
+                                    <i class="bi bi-check-circle"></i> Normal Session
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-attack" onclick="startSimulator('hijack')">
+                                    <i class="bi bi-key-fill"></i> Session Hijacking
+                                </button>
+                                <button type="button" class="btn btn-outline-warning btn-attack" onclick="startSimulator('fixation')">
+                                    <i class="bi bi-lock-fill"></i> Session Fixation
+                                </button>
+                                <button type="button" class="btn btn-outline-info btn-attack" onclick="startSimulator('replay')">
+                                    <i class="bi bi-arrow-repeat"></i> Replay Attack
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-attack" onclick="startSimulator('token_theft')">
+                                    <i class="bi bi-shield-x"></i> Token Theft
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-danger w-100" onclick="stopSimulator()">
+                            <i class="bi bi-stop-circle"></i> Stop Simulation
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Threat Detector -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-shield-check"></i> Threat Detector
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="modelSelect" class="form-label fw-bold">Select Detection Model:</label>
+                            <select class="form-select" id="modelSelect">
+                                <option value="ensemble">Ensemble (Acc: 92.94%)</option>
+                                <option value="gradient_boosting">Gradient Boosting (Acc: 99.97%)</option>
+                                <option value="random_forest">Random Forest (Acc: 99.89%)</option>
+                                <option value="gmm">GMM (Acc: 96.79%)</option>
+                                <option value="autoencoder">Autoencoder (Acc: 94.59%)</option>
+                                <option value="kmeans">K-Means (Acc: 86.72%)</option>
+                                <option value="one_class_svm">One-Class SVM (Acc: 86.05%)</option>
+                                <option value="dbscan">DBSCAN (Acc: 34.06%)</option>
+                                <option value="isolation_forest">Isolation Forest (Acc: 7.70%)</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn btn-primary w-100 mb-3" onclick="detectThreat()">
+                            <i class="bi bi-search"></i> Detect Threat
+                        </button>
+                        
+                        <div id="detectionResult" style="display: none;">
+                            <div class="alert alert-info">
+                                <strong>Detection Result:</strong>
+                                <div id="resultContent"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="loadingSpinner" class="loading-spinner text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Performance Metrics -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-graph-up"></i> Model Performance Metrics
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Model</th>
+                                <th>Type</th>
+                                <th>Accuracy</th>
+                                <th>Parameters</th>
+                                <th>Avg Latency</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modelsTable">
+                            <!-- Models will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Latency Benchmark Results -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-speedometer2"></i> API Latency Benchmark Results
+            </div>
+            <div class="card-body">
+                <h5 class="mb-4">Summary Statistics</h5>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="metrics-card">
+                            <div class="metrics-value" id="avgColdLoad">581.7ms</div>
+                            <div class="metrics-label">Avg Cold Load</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metrics-card">
+                            <div class="metrics-value" id="avgWarmCache">5.4ms</div>
+                            <div class="metrics-label">Avg Warm Cache</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metrics-card">
+                            <div class="metrics-value" id="avgCachedResult">4.0ms</div>
+                            <div class="metrics-label">Avg Cached Result</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metrics-card">
+                            <div class="metrics-value" id="modelsTested">10</div>
+                            <div class="metrics-label">Models Tested</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="mb-3">Per-Model Latencies</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Model</th>
+                                <th>Cold Load</th>
+                                <th>Warm Cache</th>
+                                <th>Cached Result</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="benchmarkTable">
+                            <!-- Benchmark data will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <strong>Legend:</strong> Cold Load = First prediction (model loading time included) • 
+                        Warm Cache = Model in memory • Cached Result = Previously predicted input
+                    </small>
+                    <br>
+                    <small class="text-muted">
+                        <strong>Benchmark timestamp:</strong> <span id="benchmarkTimestamp">2025-11-06T14:55:19.209953</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Load models on page load
+        window.onload = function() {
+            loadModels();
+            loadBenchmark();
+            checkSimulatorStatus();
+        };
+
+        // Check simulator status periodically
+        setInterval(checkSimulatorStatus, 2000);
+
+        function loadModels() {
+            fetch('/api/models')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('modelsTable');
+                    tbody.innerHTML = '';
+                    
+                    data.models.forEach(model => {
+                        const row = document.createElement('tr');
+                        
+                        const statusClass = model.status === 'ready' ? 'status-ready' : 'status-available';
+                        const typeClass = `badge-${model.type}`;
+                        const latency = model.latency !== 'N/A' ? `${model.latency}ms` : 'N/A';
+                        
+                        row.innerHTML = `
+                            <td><strong>${model.name}</strong></td>
+                            <td><span class="badge badge-type ${typeClass}">${model.type}</span></td>
+                            <td><strong>${model.accuracy.toFixed(2)}%</strong></td>
+                            <td>${model.parameters}</td>
+                            <td>${latency}</td>
+                            <td>
+                                <span class="status-indicator ${statusClass}"></span>
+                                ${model.status}
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading models:', error));
+        }
+
+        function loadBenchmark() {
+            fetch('/api/benchmark')
+                .then(response => response.json())
+                .then(data => {
+                    // Update summary
+                    document.getElementById('avgColdLoad').textContent = `${data.summary.avg_cold_load}ms`;
+                    document.getElementById('avgWarmCache').textContent = `${data.summary.avg_warm_cache}ms`;
+                    document.getElementById('avgCachedResult').textContent = `${data.summary.avg_cached_result}ms`;
+                    document.getElementById('modelsTested').textContent = data.summary.models_tested;
+                    document.getElementById('benchmarkTimestamp').textContent = data.timestamp;
+                    
+                    // Populate table
+                    const tbody = document.getElementById('benchmarkTable');
+                    tbody.innerHTML = '';
+                    
+                    data.per_model.forEach(model => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>${model.model}</strong></td>
+                            <td>${model.cold_load.toFixed(2)}ms</td>
+                            <td>${model.warm_cache.toFixed(2)}ms</td>
+                            <td>${model.cached_result.toFixed(2)}ms</td>
+                            <td>${model.confidence.toFixed(1)}%</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading benchmark:', error));
+        }
+
+        function startSimulator(attackType) {
+            fetch('/api/simulator/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ attack_type: attackType })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateSimulatorStatus(true, attackType);
+                }
+            })
+            .catch(error => console.error('Error starting simulator:', error));
+        }
+
+        function stopSimulator() {
+            fetch('/api/simulator/stop', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateSimulatorStatus(false, 'normal');
+                }
+            })
+            .catch(error => console.error('Error stopping simulator:', error));
+        }
+
+        function checkSimulatorStatus() {
+            fetch('/api/simulator/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateSimulatorStatus(data.running, data.attack_type);
+                })
+                .catch(error => console.error('Error checking status:', error));
+        }
+
+        function updateSimulatorStatus(running, attackType) {
+            const statusDiv = document.getElementById('simulatorStatus');
+            const statusText = document.getElementById('statusText');
+            
+            if (running) {
+                statusDiv.className = 'simulator-status simulator-running';
+                statusText.textContent = `Running (${attackType})`;
+            } else {
+                statusDiv.className = 'simulator-status simulator-stopped';
+                statusText.textContent = 'Stopped';
+            }
+        }
+
+        function detectThreat() {
+            const modelSelect = document.getElementById('modelSelect');
+            const selectedModel = modelSelect.value;
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const detectionResult = document.getElementById('detectionResult');
+            const resultContent = document.getElementById('resultContent');
+            
+            loadingSpinner.style.display = 'block';
+            detectionResult.style.display = 'none';
+            
+            fetch('/api/detect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ model: selectedModel })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingSpinner.style.display = 'none';
+                
+                if (data.success) {
+                    const alertClass = data.threats_detected > 0 ? 'alert-danger' : 'alert-success';
+                    detectionResult.className = `alert ${alertClass}`;
+                    
+                    resultContent.innerHTML = `
+                        <p><strong>Threats Detected:</strong> ${data.threats_detected} / ${data.total_samples}</p>
+                        <p><strong>Confidence:</strong> ${data.confidence}%</p>
+                        <p><strong>Latency:</strong> ${data.latency_ms}ms</p>
+                        <p><strong>Model:</strong> ${modelSelect.options[modelSelect.selectedIndex].text}</p>
+                    `;
+                    detectionResult.style.display = 'block';
+                } else {
+                    detectionResult.className = 'alert alert-warning';
+                    resultContent.innerHTML = `<p>Error: ${data.error}</p>`;
+                    detectionResult.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                loadingSpinner.style.display = 'none';
+                detectionResult.className = 'alert alert-warning';
+                resultContent.innerHTML = `<p>Error: ${error.message}</p>`;
+                detectionResult.style.display = 'block';
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+# Configuration for Session Token Abuse Detection System
+
+# Data Generation Settings
+data_generation:
+  num_normal_sessions: 10000
+  num_hijack_sessions: 500
+  num_fixation_sessions: 500
+  session_duration_mean: 3600  # seconds
+  session_duration_std: 1800
+  actions_per_session_mean: 15
+  actions_per_session_std: 10
+
+# Feature Engineering
+features:
+  use_ip_features: true
+  use_geolocation: true
+  use_device_fingerprint: true
+  use_temporal_features: true
+  use_behavioral_sequences: true
+  sequence_length: 20
+
+# Model Settings
+models:
+  # Anomaly Detection Models
+  isolation_forest:
+    n_estimators: 100
+    contamination: 0.1
+    max_samples: 256
+    
+  one_class_svm:
+    kernel: 'rbf'
+    nu: 0.1
+    gamma: 'auto'
+    
+  autoencoder:
+    encoding_dim: 32
+    hidden_layers: [128, 64, 32]
+    epochs: 20
+    batch_size: 32
+    
+  # Behavioral Models
+  lstm:
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.3
+    epochs: 15
+    batch_size: 64
+    
+  random_forest:
+    n_estimators: 200
+    max_depth: 20
+    min_samples_split: 5
+    
+# Ensemble Settings
+ensemble:
+  voting_strategy: 'weighted'  # 'weighted' or 'majority'
+  weights:
+    # Weights based on individual model performance
+    isolation_forest: 0.05      # Low precision (7.7%), high recall
+    one_class_svm: 0.05          # Low precision (35.5%), high recall  
+    autoencoder: 0.15            # Moderate (58.5% precision, 90.9% recall)
+    dbscan: 0.15                 # Optimized (16.2% precision, 91.3% recall)
+    kmeans: 0.10                 # Moderate performance
+    gmm: 0.15                    # Good precision (98.2%), moderate recall (59.4%)
+    random_forest: 0.25          # Excellent (98.9% precision, 99.6% recall)
+    gradient_boosting: 0.30      # Best model (99.6% precision, 100% recall)
+  threshold: 0.3  # Conservative threshold for high precision
+
+# Detection Thresholds
+thresholds:
+  ip_change_suspicious: 2
+  impossible_travel_speed_kmh: 800  # Speed of commercial aircraft
+  device_fingerprint_mismatch: true
+  session_age_max_hours: 24
+  
+# Paths
+paths:
+  data_raw: 'data/raw'
+  data_processed: 'data/processed'
+  models: 'models'
+  logs: 'logs'
+  outputs: 'outputs'
+  
+# Logging
+logging:
+  level: 'INFO'
+  format: '{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}'
